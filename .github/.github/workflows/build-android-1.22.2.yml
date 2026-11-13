@@ -1,0 +1,50 @@
+
+name: Build RetroArch Android 1.22.2
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout RetroArch 1.22.2
+        uses: actions/checkout@v4
+        with:
+          ref: v1.22.2
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android components
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platforms;android-30" "build-tools;30.0.3" "ndk;22.0.7026061"
+
+      - name: Compile RetroArch
+        working-directory: pkg/android/phoenix
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          find build/outputs/apk -name '*.apk'
+
+      - name: Upload APK files
+        uses: actions/upload-artifact@v4
+        with:
+          name: RetroArch-1.22.2-Android
+          if-no-files-found: error
+          path: |
+            pkg/android/phoenix/build/outputs/apk/normal/debug/phoenix-normal-debug.apk
+            pkg/android/phoenix/build/outputs/apk/aarch64/debug/phoenix-aarch64-debug.apk
